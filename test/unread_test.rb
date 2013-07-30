@@ -145,6 +145,30 @@ class UnreadTest < ActiveSupport::TestCase
     assert_equal 0, @reader.read_marks.single.count
   end
 
+  def test_mark_as_unread_multiple
+    @email1.mark_as_read! :for => @reader
+    @email2.mark_as_read! :for => @reader
+
+    assert_equal false, @email1.unread?(@reader)
+    assert_equal false, @email2.unread?(@reader)
+
+    Email.mark_as_unread! [ @email1, @email2 ], :for => @reader
+
+    assert_equal true, @email1.unread?(@reader)
+    assert_equal true, @email2.unread?(@reader)
+  end
+
+  def test_mark_as_unread_with_marked_all
+    wait
+
+    @email1.mark_as_read! :for => @reader
+    @email2.mark_as_read! :for => @reader
+
+    Email.mark_as_unread! :all, :for => @reader
+
+    assert_equal [], @reader.read_marks
+  end
+
   def test_cleanup_read_marks
     assert_equal 0, @reader.read_marks.single.count
 

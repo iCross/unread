@@ -14,6 +14,21 @@ module Unread
         end
       end
 
+      def mark_as_unread!(target, options)
+        user = options[:for]
+        assert_reader(user)
+
+        if target == :all
+          ReadMark.transaction do
+            user.read_marks.where(:readable_type => self.base_class.name).delete_all
+          end
+        elsif target.is_a?(Array)
+          mark_array_as_unread(target, user)
+        else
+          raise ArgumentError
+        end
+      end
+
       def mark_array_as_read(array, user)
         ReadMark.transaction do
           array.each do |obj|
@@ -22,6 +37,17 @@ module Unread
             rm = obj.read_marks.where(:user_id => user.id).first || obj.read_marks.build(:user_id => user.id)
             rm.timestamp = obj.send(readable_options[:on])
             rm.save!
+          end
+        end
+      end
+
+      def mark_array_as_unread(array, user)
+        ReadMark.transaction do
+          array.each do |obj|
+            raise ArgumentError unless obj.is_a?(self)
+
+            rm = obj.read_marks.where(:user_id => user.id).first || obj.read_marks.build(:user_id => user.id)
+            rm.destroy
           end
         end
       end
@@ -132,10 +158,7 @@ module Unread
         self.class.assert_reader(user)
 
         ReadMark.transaction do
-          rm = read_mark(user)
-          if !rm.nil?
-            rm.destroy
-          end
+          read_marks.where(:user_id => user.id).delete_all
         end
       end
 
